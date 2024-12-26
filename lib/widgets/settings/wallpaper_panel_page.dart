@@ -54,7 +54,8 @@ class WallpaperPanelPage extends StatelessWidget {
             ),
             onPressed: () async {
               try {
-                await context.read<WallpaperService>().pickWallpaper();
+                // TODO
+                //await context.read<WallpaperService>().pickWallpaper();
               } on NoFileExplorerException {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -70,6 +71,33 @@ class WallpaperPanelPage extends StatelessWidget {
                 );
               }
             },
+          ),
+          TextButton(
+            child: Row(
+              children: [
+                Icon(Icons.gradient),
+                Container(width: 8),
+                Text("Bing", style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+            onPressed: () async {
+              try {
+                await context.read<WallpaperService>().setWallpaperSource("BingDailyWallpaperSource");
+              } catch (err) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    duration: Duration(seconds: 8),
+                    content: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text(err.toString())
+                      ],
+                    ),
+                  ),
+                );
+              }
+            }
           ),
         ],
       );

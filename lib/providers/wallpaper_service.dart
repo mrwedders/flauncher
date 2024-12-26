@@ -16,11 +16,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/wallpaper/bing_wallpaper.dart';
+import 'package:flauncher/providers/wallpaper/common_wallpaper.dart';
+import 'package:flauncher/providers/wallpaper/file_picker_wallpaper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -36,40 +40,58 @@ class WallpaperService extends ChangeNotifier {
 
   ImageProvider?  get wallpaper     => _wallpaper;
 
+  IWallpaperSource? _wallpaperSource;
+
   FLauncherGradient get gradient => FLauncherGradients.all.firstWhere(
         (gradient) => gradient.uuid == _settingsService.gradientUuid,
         orElse: () => FLauncherGradients.greatWhale,
       );
 
   WallpaperService(this._fLauncherChannel, this._settingsService) :
-    _wallpaper = null
+    _wallpaper = null, _wallpaperSource = null
   {
     _init();
   }
 
   Future<void> _init() async {
+    // Setup wallpaper file
     final directory = await getApplicationDocumentsDirectory();
     _wallpaperFile = File("${directory.path}/wallpaper");
+
+    // Init wallpaper source
+    setWallpaperSource(await _settingsService.wallpaperSource);
+
+    // Load wallpaper
     if (await _wallpaperFile.exists()) {
       _wallpaper = FileImage(_wallpaperFile);
       notifyListeners();
     }
   }
 
-  Future<void> pickWallpaper() async {
-    if (!await _fLauncherChannel.checkForGetContentAvailability()) {
-      throw NoFileExplorerException();
-    }
+  Future<void> _updateWallpaperFromSource() async {
+    if (await _wallpaperSource?.update() ?? false) {
+      Uint8List? bytes = await _wallpaperSource?.getWallpaper();
+      if (bytes == null || bytes.length == 0) 
+        throw Exception("Got null bytes from wallpaper source");
 
-    final imagePicker = ImagePicker();
-    final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      Uint8List bytes = await pickedFile.readAsBytes();
       await _wallpaperFile.writeAsBytes(bytes);
-
       _wallpaper = MemoryImage(bytes);
       notifyListeners();
     }
+  }
+
+  IWallpaperSource? _getWallpaperSourceFromName(String? name) {
+    switch (name) {
+      case "BingDailyWallpaperSource":
+        return new BingDailyWallpaperSource(_settingsService);
+    }
+
+    return null;
+  }
+
+  Future<void> setWallpaperSource(String? sourceName) async {
+    _wallpaperSource = _getWallpaperSourceFromName(sourceName);
+    await _updateWallpaperFromSource();
   }
 
   Future<void> setGradient(FLauncherGradient fLauncherGradient) async {

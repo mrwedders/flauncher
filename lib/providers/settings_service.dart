@@ -32,6 +32,7 @@ const _showCategoryTitles = "show_category_titles";
 const _showDateInStatusBar = "show_date_in_status_bar";
 const _showTimeInStatusBar = "show_time_in_status_bar";
 const _timeFormat = "time_format";
+const _wallpaperSource = "wallpaper_source";
 
 class SettingsService extends ChangeNotifier {
   static final defaultDateFormat = "EEEE d";
@@ -58,6 +59,23 @@ class SettingsService extends ChangeNotifier {
   String get dateFormat => _sharedPreferences.getString(_dateFormat) ?? defaultDateFormat;
 
   String get timeFormat => _sharedPreferences.getString(_timeFormat) ?? defaultTimeFormat;
+
+  String? get wallpaperSource => _sharedPreferences.getString(_wallpaperSource);
+
+  int? get bingLastUpdateDate => _sharedPreferences.getInt("bing_last_update");
+  Future<void> setBingLastUpdateDate(int value) async {
+    await _sharedPreferences.setInt("bing_last_update", value);
+    notifyListeners();
+  }
+
+  String? get bingLastUrl => _sharedPreferences.getString("bing_last_url");
+  Future<void> setBingLastUrl(String? value) async {
+    if (value == null) {
+      await _sharedPreferences.remove("bing_last_url");
+    } else 
+      await _sharedPreferences.setString("bing_last_url", value);
+    notifyListeners();
+  }
 
   SettingsService(
     this._sharedPreferences
